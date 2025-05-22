@@ -1,0 +1,18 @@
+[
+  {
+    pattern: '**/*',
+    template: {
+      'index.tsx':
+        'interface Props {}\n\nexport const {{name}} = ({}: Props) => {\n  return (\n    <div>\n      {{name}}\n    </div>\n  )\n}',
+    },
+  },
+  {
+    pattern: '**/*Form',
+    template: {
+      'index.tsx':
+        'interface Props {}\n\nexport const {{name}} = ({}: Props) => {\n  return (\n    <div>\n      {{name}}\n    </div>\n  )\n}',
+      'use{{name}}.ts':
+        "import { z } from 'zod'\nimport { useForm } from 'react-hook-form'\nimport { zodResolver } from '@hookform/resolvers/zod'\n\nconst schema = z.object({\n  // Define your schema here\n})\n\nexport type FormValues = z.infer<typeof schema>\n\nexport const use{{name}} = (initialValues?: Partial<FormValues>) => {\n  return useForm<FormValues>({\n    resolver: zodResolver(schema),\n    defaultValues: initialValues,\n    mode: 'onChange'\n  })\n}",
+    },
+  },
+];
