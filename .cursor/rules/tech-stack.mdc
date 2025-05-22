@@ -1,0 +1,18 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Technology Stack Guidelines
+
+The project uses:
+- Next.js as the main framework
+- Tailwind CSS for styling
+- shadcn/ui for UI components
+- InstantDB for data layer
+
+When working with these technologies:
+- Follow Next.js App Router patterns and conventions
+- Use Tailwind CSS directly in components
+- Implement shadcn/ui following their installation guide
+- Use InstantDB for all data operations

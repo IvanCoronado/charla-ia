@@ -5,10 +5,10 @@ alwaysApply: false
 ---
 When installing or working with UI components:
 
-1. Always use shadcn/ui for new component installations
+1. Always use shadcn for new component installations
 2. Installation commands must follow this format:
    ```bash
-   npx shadcn-ui@latest add [component-name]
+   npx shadcn@latest add [component-name]
    ```
 
 3. Component styling guidelines:
@@ -28,10 +28,10 @@ When installing or working with UI components:
 Example usage:
 ```bash
 # Installing a button component
-npx shadcn-ui@latest add button
+npx shadcn@latest add button
 
 # Installing a dialog component
-npx shadcn-ui@latest add dialog
+npx shadcn@latest add dialog
 ```
 
 Remember to:

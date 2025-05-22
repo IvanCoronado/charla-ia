@@ -1,0 +1,225 @@
+---
+description: When working with the data layer, follow these guidelines:
+globs: 
+alwaysApply: false
+---
+# Guía de Capa de Datos (Instant DB)
+
+## Flujo de Trabajo
+1. **Verificar/Crear Modelo** → Revisar `instant.schema.ts`
+2. **Crear Hooks** → Generar en `db/[entidad].ts`
+3. **Usar en Componentes** → Importar y usar hooks
+
+---
+
+## 1. Schema (instant.schema.ts)
+
+### Entities
+```typescript
+entities: {
+  posts: i.entity({
+    title: i.string(),
+    content: i.string().optional(),
+    authorId: i.string().indexed(),
+    createdAt: i.number().indexed(),
+    isPublished: i.boolean().optional(),
+  }),
+  users: i.entity({
+    email: i.string().unique().indexed(),
+    name: i.string().optional(),
+  }),
+}
+```
+
+### Links (Relaciones)
+```typescript
+links: {
+  userPosts: {
+    forward: { on: 'users', has: 'many', label: 'posts' },
+    reverse: { on: 'posts', has: 'one', label: 'author' }
+  }
+}
+```
+
+### Rooms (Real-time)
+```typescript
+rooms: {
+  chat: {
+    presence: i.entity({
+      name: i.string(),
+      avatar: i.string().optional(),
+    }),
+    topics: {
+      messages: i.entity({
+        content: i.string(),
+        senderId: i.string(),
+        timestamp: i.number(),
+      })
+    }
+  }
+}
+```
+
+---
+
+## 2. Data Access Layer (db/[entidad].ts)
+
+### Queries
+```typescript
+import { db } from './client';
+
+// Listar todos
+export const usePosts = () => db.useQuery({ posts: {} });
+
+// Por ID
+export const usePost = (id: string) => 
+  db.useQuery({ posts: { $: { where: { id } } } });
+
+// Con relaciones
+export const usePostWithAuthor = (id: string) => 
+  db.useQuery({ 
+    posts: { 
+      $: { where: { id } },
+      author: {} 
+    } 
+  });
+
+// Filtrados
+export const usePublishedPosts = () => 
+  db.useQuery({ 
+    posts: { 
+      $: { 
+        where: { isPublished: true },
+        sort: { by: 'createdAt', order: 'desc' }
+      } 
+    } 
+  });
+```
+
+### Mutations
+```typescript
+// Crear
+export const useCreatePost = () => {
+  return (data: { title: string; content?: string; authorId: string }) => {
+    return db.transact([
+      tx.posts[id()].update({
+        ...data,
+        createdAt: Date.now(),
+        isPublished: false,
+      })
+    ]);
+  };
+};
+
+// Actualizar
+export const useUpdatePost = () => {
+  return (id: string, updates: Partial<Post>) => {
+    return db.transact([tx.posts[id].update(updates)]);
+  };
+};
+
+// Eliminar
+export const useDeletePost = () => {
+  return (id: string) => {
+    return db.transact([tx.posts[id].delete()]);
+  };
+};
+```
+
+---
+
+## 3. Uso en Componentes
+
+```typescript
+import { useCreatePost, usePosts } from '@/db/posts';
+
+export function PostsList() {
+  const { data: posts, isLoading } = usePosts();
+  const createPost = useCreatePost();
+
+  const handleCreate = async () => {
+    await createPost({
+      title: 'Nuevo Post',
+      authorId: 'user-123'
+    });
+  };
+
+  if (isLoading) return <div>Cargando...</div>;
+
+  return (
+    <div>
+      <button onClick={handleCreate}>Crear Post</button>
+      {posts?.posts?.map(post => (
+        <div key={post.id}>{post.title}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+---
+
+## 4. Comandos Útiles
+
+```bash
+# Subir schema
+npx instant-cli@latest push schema
+
+# Subir permisos
+npx instant-cli@latest push perms
+
+# Ver datos en Explorer
+npx instant-cli@latest explorer
+```
+
+---
+
+## 5. Tipos TypeScript
+
+```typescript
+import { InstaQLEntity } from '@instantdb/react';
+import { AppSchema } from '../instant.schema';
+
+type Post = InstaQLEntity<AppSchema, 'posts'>;
+type User = InstaQLEntity<AppSchema, 'users'>;
+```
+
+---
+
+## 6. Transacciones
+
+```typescript
+import { tx, id } from '@instantdb/react';
+
+// Crear múltiples entidades relacionadas
+export const useCreatePostWithTags = () => {
+  return (postData: any, tagNames: string[]) => {
+    const postId = id();
+    
+    return db.transact([
+      // Crear post
+      tx.posts[postId].update(postData),
+      // Crear tags
+      ...tagNames.map(name => 
+        tx.tags[id()].update({ name, postId })
+      )
+    ]);
+  };
+};
+```
+
+# Data Layer Guidelines
+
+When working with the data layer:
+- Use InstantDB for all database operations
+- Define all models in `instant.schema.ts`
+- Create specific hooks for each entity
+- Keep data logic separate from components
+- Define permissions in `instant.perms.ts`
+
+## Best Practices
+- Validate all user inputs
+- Keep database operations in dedicated hooks/functions
+- Follow InstantDB's recommended patterns
+- Handle errors appropriately
+- Use proper typing for all database operations
