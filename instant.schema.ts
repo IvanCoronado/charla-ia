@@ -11,6 +11,11 @@ const _schema = i.schema({
     $users: i.entity({
       email: i.string().unique().indexed().optional(),
     }),
+    ingredients: i.entity({
+      name: i.string(),
+      checked: i.boolean(),
+      userId: i.string().indexed(),
+    }),
   },
   links: {},
   rooms: {},
