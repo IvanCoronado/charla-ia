@@ -1,7 +1,7 @@
 ---
-description: When you need install ui componentes
+description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 When installing or working with UI components:
 

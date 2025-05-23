@@ -5,6 +5,12 @@ alwaysApply: true
 ---
 # Code Structure Guidelines
 
+## Technology Stack
+- Next.js como framework principal
+- Tailwind CSS para estilos
+- shadcn/ui para componentes de UI
+- InstantDB para capa de datos
+
 ## Directory Organization
 - Page components go in `app/`
 - Reusable components go in `components/`
@@ -19,7 +25,6 @@ alwaysApply: true
 - No TODOs or incomplete code in production
 
 ## Component Guidelines
-- Prefer server-side components by default
-- Use 'use client' only when necessary
 - Keep components small and focused
-- Follow component-specific patterns for each technology
+- Use Tailwind CSS directly in components
+- Follow shadcn/ui installation and usage patterns

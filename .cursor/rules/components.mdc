@@ -1,0 +1,225 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Component Guidelines
+
+## Plantilla Base
+
+```typescript
+// Imports ordenados
+import { type ReactNode } from 'react'
+import { useCallback } from 'react'
+import { cn } from '@/lib/utils'
+
+// Props interface
+interface Props {
+  children?: ReactNode
+  className?: string
+}
+
+export const ComponentName = ({ children, className }: Props) => {
+  return (
+    <div className={cn('base-styles', className)}>
+      {children}
+    </div>
+  )
+}
+```
+
+## Estructura de Archivos
+```
+components/
+  ComponentName/
+    ├── index.tsx        # Componente principal
+    ├── types.ts         # Tipos y interfaces (opcional)
+    └── useHooks.ts      # Hooks específicos (opcional)
+```
+
+## Mejores Prácticas
+
+### Props
+- Siempre definir interface Props
+- Usar tipos explícitos, nunca any
+- Props opcionales con `?`
+- Documentar props complejas con comentarios
+- Usar destructuring en los parámetros
+
+### Naming
+- PascalCase para nombres de componentes
+- camelCase para props y variables
+- Nombres descriptivos y explícitos
+- Sufijos comunes:
+  - `List` para listas
+  - `Item` para elementos de lista
+  - `Card` para tarjetas
+  - `Modal` para modales
+  - `Button` para botones
+
+### Estilos
+- Usar Tailwind directamente
+- Implementar className prop para extensibilidad
+- Usar cn() para combinar clases
+- Seguir el design system del proyecto
+- Mantener consistencia en espaciados
+
+### Composición
+- Un componente, una responsabilidad
+- Extraer lógica compleja a hooks
+- Evitar componentes >200 líneas
+- Usar composición sobre herencia
+- Implementar children cuando sea apropiado
+
+### Server vs Client
+```typescript
+// Server Component (default)
+export const ServerComponent = () => {
+  return <div>Rendered on server</div>
+}
+
+// Client Component
+'use client'
+export const ClientComponent = () => {
+  const [state, setState] = useState()
+  return <div>Interactive content</div>
+}
+```
+
+### Imports y Exports
+- Imports agrupados y ordenados
+- Exportar componentes como named exports
+- No usar default exports
+- No crear barrel files (index.ts)
+- Importar tipos con type
+
+```typescript
+// Imports ordenados
+import { type ReactNode } from 'react'
+import { useCallback, useState } from 'react'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+```
+
+### Estado y Efectos
+- Preferir hooks personalizados
+- useCallback para handlers
+- useMemo para cálculos pesados
+- Efectos limpios y focalizados
+- Evitar efectos innecesarios
+
+### Error Boundaries
+```typescript
+export const ComponentWithErrorBoundary = () => {
+  return (
+    <ErrorBoundary fallback={<ErrorMessage />}>
+      <Component />
+    </ErrorBoundary>
+  )
+}
+```
+
+### Loading States
+```typescript
+export const ComponentWithLoading = () => {
+  const [isLoading, setIsLoading] = useState(false)
+  
+  return (
+    <div>
+      {isLoading ? (
+        <LoadingSpinner />
+      ) : (
+        <Content />
+      )}
+    </div>
+  )
+}
+```
+
+### Componentes UI (shadcn)
+- Instalar con el CLI de shadcn
+- No modificar componentes base
+- Extender a través de composición
+- Mantener consistencia con el tema
+- Usar variants para personalización
+
+### Accesibilidad
+- Implementar roles ARIA apropiados
+- Manejar navegación por teclado
+- Asegurar contraste de colores
+- Mantener estructura semántica
+- Proporcionar textos alternativos
+
+### Testing
+- Escribir tests para lógica compleja
+- Usar testing-library/react
+- Probar diferentes estados
+- Simular interacciones
+- Mantener tests mantenibles
+
+## Ejemplos Comunes
+
+### Componente con Estado
+```typescript
+'use client'
+
+interface Props {
+  initialCount?: number
+}
+
+export const Counter = ({ initialCount = 0 }: Props) => {
+  const [count, setCount] = useState(initialCount)
+  
+  const increment = useCallback(() => {
+    setCount(prev => prev + 1)
+  }, [])
+  
+  return (
+    <div className="flex items-center gap-4">
+      <span>{count}</span>
+      <Button onClick={increment}>Increment</Button>
+    </div>
+  )
+}
+```
+
+### Componente con Hook Personalizado
+```typescript
+interface Props {
+  userId: string
+}
+
+export const UserProfile = ({ userId }: Props) => {
+  const { user, isLoading, error } = useUser(userId)
+  
+  if (isLoading) return <LoadingSpinner />
+  if (error) return <ErrorMessage error={error} />
+  
+  return (
+    <div className="space-y-4">
+      <h2>{user.name}</h2>
+      <p>{user.email}</p>
+    </div>
+  )
+}
+```
+
+### Componente Lista
+```typescript
+interface Props {
+  items: Item[]
+  onItemClick: (item: Item) => void
+}
+
+export const ItemList = ({ items, onItemClick }: Props) => {
+  return (
+    <ul className="space-y-2">
+      {items.map(item => (
+        <li key={item.id}>
+          <ItemCard item={item} onClick={() => onItemClick(item)} />
+        </li>
+      ))}
+    </ul>
+  )
+}
+```

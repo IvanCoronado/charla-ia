@@ -1,16 +1,15 @@
 ---
-description: When working with the data layer, follow these guidelines:
+description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
-# Guía de Capa de Datos (Instant DB)
+# Data Layer Guidelines
 
 ## Flujo de Trabajo
-1. **Verificar/Crear Modelo** → Revisar `instant.schema.ts`
+1. **Verificar Schema** → Asegurarse que la entidad existe en `instant.schema.ts`
 2. **Crear Hooks** → Generar en `db/[entidad].ts`
-3. **Usar en Componentes** → Importar y usar hooks
-
----
+3. **Implementar CRUD** → Crear queries y mutations necesarias
+4. **Usar en Componentes** → Importar y usar hooks
 
 ## 1. Schema (instant.schema.ts)
 
@@ -60,106 +59,141 @@ rooms: {
 }
 ```
 
----
+## 2. Plantilla CRUD
 
-## 2. Data Access Layer (db/[entidad].ts)
-
-### Queries
 ```typescript
-import { db } from './client';
+import { AppSchema, db } from './client';
+import { id, InstaQLEntity, tx } from '@instantdb/react';
 
-// Listar todos
-export const usePosts = () => db.useQuery({ posts: {} });
+// Definición de tipo para la entidad
+export type Entity = InstaQLEntity<AppSchema, 'entityName'>;
 
-// Por ID
-export const usePost = (id: string) => 
-  db.useQuery({ posts: { $: { where: { id } } } });
+// Hook de consulta para obtener entidades del usuario actual
+export function useEntities() {
+  const { user } = db.useAuth();
 
-// Con relaciones
-export const usePostWithAuthor = (id: string) => 
-  db.useQuery({ 
-    posts: { 
-      $: { where: { id } },
-      author: {} 
-    } 
+  const { isLoading, error, data } = db.useQuery({
+    entityName: {
+      $: {
+        where: {
+          userId: user?.id || '',
+        },
+      },
+    },
   });
 
-// Filtrados
-export const usePublishedPosts = () => 
-  db.useQuery({ 
-    posts: { 
-      $: { 
-        where: { isPublished: true },
-        sort: { by: 'createdAt', order: 'desc' }
-      } 
-    } 
-  });
+  return {
+    isLoading,
+    error,
+    entities: (data?.entityName || []) as Entity[],
+  };
+}
+
+// Tipo de entrada para crear/actualizar entidades
+type EntityInput = Pick<Entity, 'field1' | 'field2' | 'field3'>;
+
+// Mutación para crear entidad
+export async function createEntity({ input, userId }: { input: EntityInput; userId: string }) {
+  const entityId = id();
+  const now = Date.now();
+
+  await db.transact(
+    tx.entityName[entityId].update({
+      ...input,
+      userId,
+      createdAt: now,
+      updatedAt: now,
+    })
+  );
+
+  return entityId;
+}
+
+// Mutación para actualizar entidad
+export async function updateEntity({ entityId, input }: { entityId: string; input: Partial<EntityInput> }) {
+  await db.transact(
+    tx.entityName[entityId].update({
+      ...input,
+      updatedAt: Date.now(),
+    })
+  );
+}
+
+// Mutación para eliminar entidad
+export async function deleteEntity({ entityId }: { entityId: string }) {
+  await db.transact(tx.entityName[entityId].delete());
+}
 ```
-
-### Mutations
-```typescript
-// Crear
-export const useCreatePost = () => {
-  return (data: { title: string; content?: string; authorId: string }) => {
-    return db.transact([
-      tx.posts[id()].update({
-        ...data,
-        createdAt: Date.now(),
-        isPublished: false,
-      })
-    ]);
-  };
-};
-
-// Actualizar
-export const useUpdatePost = () => {
-  return (id: string, updates: Partial<Post>) => {
-    return db.transact([tx.posts[id].update(updates)]);
-  };
-};
-
-// Eliminar
-export const useDeletePost = () => {
-  return (id: string) => {
-    return db.transact([tx.posts[id].delete()]);
-  };
-};
-```
-
----
 
 ## 3. Uso en Componentes
 
 ```typescript
-import { useCreatePost, usePosts } from '@/db/posts';
+import { useEntities, createEntity } from '@/db/entity';
 
-export function PostsList() {
-  const { data: posts, isLoading } = usePosts();
-  const createPost = useCreatePost();
-
-  const handleCreate = async () => {
-    await createPost({
-      title: 'Nuevo Post',
-      authorId: 'user-123'
-    });
-  };
-
+export function EntityList() {
+  const { entities, isLoading } = useEntities();
+  
   if (isLoading) return <div>Cargando...</div>;
 
   return (
     <div>
-      <button onClick={handleCreate}>Crear Post</button>
-      {posts?.posts?.map(post => (
-        <div key={post.id}>{post.title}</div>
+      {entities.map(entity => (
+        <div key={entity.id}>{entity.field1}</div>
       ))}
     </div>
   );
 }
 ```
 
----
+## Patrones de Implementación
 
-## 4. Comandos Útiles
+### Schema
+- Define todos los modelos en `instant.schema.ts`
+- Usa índices para campos que se usarán en consultas frecuentes
+- Marca campos opcionales cuando sea apropiado
+- Define relaciones usando `links`
+- Usa `rooms` para funcionalidades en tiempo real
+
+### Queries
+- Usar hooks para consultas (`useQuery`)
+- Implementar filtrado por usuario cuando sea necesario
+- Manejar estados de carga y error
+- Tipar correctamente los resultados
+
+### Mutations
+- Usar transacciones para operaciones CRUD
+- Mantener timestamps actualizados (`createdAt`, `updatedAt`)
+- Validar inputs antes de la mutación
+- Retornar IDs o datos relevantes
+- Incluir userId para relaciones con el usuario
+
+### Tipos
+- Definir tipos para entidades usando `InstaQLEntity`
+- Crear tipos para inputs usando `Pick` o `Partial`
+- Tipar correctamente parámetros y retornos
+- Usar tipos genéricos cuando sea apropiado
+
+## Mejores Prácticas
+- Mantén la lógica de datos separada de los componentes
+- Usa hooks específicos para cada entidad
+- Valida todas las entradas de usuario
+- Maneja errores apropiadamente
+- Usa tipado adecuado para todas las operaciones
+- Mantén las operaciones de base de datos en hooks/funciones dedicadas
+- Define permisos en `instant.perms.ts`
+
+## Estructura de Archivos
+```
+db/
+  ├── client.ts           # Configuración de InstantDB
+  ├── entity.ts           # CRUD para una entidad
+  ├── types.ts            # Tipos compartidos
+  └── utils/
+      ├── queries.ts      # Utilidades para queries
+      └── mutations.ts    # Utilidades para mutations
+```
+
+## Comandos Útiles
 
 ```bash
 # Subir schema
@@ -171,55 +205,3 @@ npx instant-cli@latest push perms
 # Ver datos en Explorer
 npx instant-cli@latest explorer
 ```
-
----
-
-## 5. Tipos TypeScript
-
-```typescript
-import { InstaQLEntity } from '@instantdb/react';
-import { AppSchema } from '../instant.schema';
-
-type Post = InstaQLEntity<AppSchema, 'posts'>;
-type User = InstaQLEntity<AppSchema, 'users'>;
-```
-
----
-
-## 6. Transacciones
-
-```typescript
-import { tx, id } from '@instantdb/react';
-
-// Crear múltiples entidades relacionadas
-export const useCreatePostWithTags = () => {
-  return (postData: any, tagNames: string[]) => {
-    const postId = id();
-    
-    return db.transact([
-      // Crear post
-      tx.posts[postId].update(postData),
-      // Crear tags
-      ...tagNames.map(name => 
-        tx.tags[id()].update({ name, postId })
-      )
-    ]);
-  };
-};
-```
-
-# Data Layer Guidelines
-
-When working with the data layer:
-- Use InstantDB for all database operations
-- Define all models in `instant.schema.ts`
-- Create specific hooks for each entity
-- Keep data logic separate from components
-- Define permissions in `instant.perms.ts`
-
-## Best Practices
-- Validate all user inputs
-- Keep database operations in dedicated hooks/functions
-- Follow InstantDB's recommended patterns
-- Handle errors appropriately
-- Use proper typing for all database operations
